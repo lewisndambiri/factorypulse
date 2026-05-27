@@ -1,0 +1,82 @@
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+
+  influxdb:
+    image: influxdb:2.7
+    ports:
+      - "8086:8086"
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: //replace with your password
+      DOCKER_INFLUXDB_INIT_ORG: factorypulse
+      DOCKER_INFLUXDB_INIT_BUCKET: machine_data
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: factorypulse-token
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+
+  postgres:
+    image: postgres:16-alpine
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: factorypulse
+      POSTGRES_PASSWORD: //replace with your password
+      POSTGRES_DB: factorypulse
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      MQTT_HOST: mosquitto
+      MQTT_PORT: 1883
+      INFLUX_URL: http://influxdb:8086
+      INFLUX_TOKEN: factorypulse-token
+      INFLUX_ORG: factorypulse
+      INFLUX_BUCKET: machine_data
+      POSTGRES_DSN: postgresql://factorypulse:factorypulse123@postgres:5432/factorypulse
+    depends_on:
+      - mosquitto
+      - influxdb
+      - postgres
+
+  simulator:
+    build: ./simulator
+    environment:
+      MQTT_HOST: mosquitto
+      MQTT_PORT: 1883
+      MACHINE_IDS: CUTTER-01,PACKER-02,ROBOT-03
+    depends_on:
+      - mosquitto
+
+  opcua-adapter:
+    build: ./opcua-adapter
+    environment:
+      MQTT_HOST: mosquitto
+      MQTT_PORT: 1883
+      OPCUA_MODE: simulated
+      OPCUA_ENDPOINT: opc.tcp://plc.example.local:4840
+    depends_on:
+      - mosquitto
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://localhost:8000
+      VITE_WS_URL: ws://localhost:8000/ws/machines
+    depends_on:
+      - backend
+
+volumes:
+  influxdb-data:
+  postgres-data:
