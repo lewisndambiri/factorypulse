@@ -39,10 +39,10 @@ services:
       MQTT_HOST: mosquitto
       MQTT_PORT: 1883
       INFLUX_URL: http://influxdb:8086
-      INFLUX_TOKEN: factorypulse-token
+      INFLUX_TOKEN: //your influx token
       INFLUX_ORG: factorypulse
       INFLUX_BUCKET: machine_data
-      POSTGRES_DSN: postgresql://factorypulse:factorypulse123@postgres:5432/factorypulse
+      POSTGRES_DSN: postgresql://factorypulse:yourpassword@postgres:5432/factorypulse
     depends_on:
       - mosquitto
       - influxdb
